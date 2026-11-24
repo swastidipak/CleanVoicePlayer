@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textColor="@color/text"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="@string/tagline"
+            android:textColor="@color/muted"
+            android:textSize="14sp" />
+
+        <!-- ============ Player card ============ -->
+        <LinearLayout style="@style/Card">
+
+            <Button
+                android:id="@+id/btnOpen"
+                style="@style/OutlineButton"
+                android:layout_width="match_parent"
+                android:text="@string/open_recording" />
+
+            <TextView
+                android:id="@+id/txtFile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:ellipsize="middle"
+                android:singleLine="true"
+                android:text="@string/no_file"
+                android:textColor="@color/text"
+                android:textSize="16sp" />
+
+            <SeekBar
+                android:id="@+id/seekPosition"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:max="1000"
+                android:progressTint="@color/accent"
+                android:thumbTint="@color/accent" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/txtPos"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="0:00"
+                    android:textColor="@color/muted" />
+
+                <TextView
+                    android:id="@+id/txtDur"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0:00"
+                    android:textColor="@color/muted" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnStop"
+                    style="@style/OutlineButton"
+                    android:layout_width="0dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_weight="1"
+                    android:text="@string/stop" />
+
+                <Button
+                    android:id="@+id/btnPlay"
+                    style="@style/PrimaryButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="2"
+                    android:text="@string/play" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ============ Enhancement card ============ -->
+        <LinearLayout style="@style/Card">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/enhance_master"
+                    android:textColor="@color/text"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <Switch
+                    android:id="@+id/swMaster"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:thumbTint="@color/accent" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/enhance_hint"
+                android:textColor="@color/muted"
+                android:textSize="13sp" />
+
+            <!-- Noise removal -->
+            <LinearLayout style="@style/RowHeader">
+                <Switch
+                    android:id="@+id/swNoise"
+                    style="@style/RowSwitch"
+                    android:text="@string/noise_removal" />
+                <TextView android:id="@+id/txtNoise" style="@style/RowValue" />
+            </LinearLayout>
+            <SeekBar
+                android:id="@+id/seekNoise"
+                style="@style/RowSeek"
+                android:max="100" />
+            <TextView
+                style="@style/RowHint"
+                android:text="@string/noise_hint" />
+
+            <!-- Voice clarity -->
+            <LinearLayout style="@style/RowHeader">
+                <Switch
+                    android:id="@+id/swClarity"
+                    style="@style/RowSwitch"
+                    android:text="@string/voice_clarity" />
+                <TextView android:id="@+id/txtClarity" style="@style/RowValue" />
+            </LinearLayout>
+            <SeekBar
+                android:id="@+id/seekClarity"
+                style="@style/RowSeek"
+                android:max="100" />
+            <TextView
+                style="@style/RowHint"
+                android:text="@string/clarity_hint" />
+
+            <!-- Volume boost -->
+            <LinearLayout style="@style/RowHeader">
+                <Switch
+                    android:id="@+id/swVolume"
+                    style="@style/RowSwitch"
+                    android:text="@string/volume_boost" />
+                <TextView android:id="@+id/txtVolume" style="@style/RowValue" />
+            </LinearLayout>
+            <SeekBar
+                android:id="@+id/seekVolume"
+                style="@style/RowSeek"
+                android:max="400" />
+            <TextView
+                style="@style/RowHint"
+                android:text="@string/volume_hint" />
+
+            <Button
+                android:id="@+id/btnMax"
+                style="@style/OutlineButton"
+                android:layout_width="match_parent"
+                android:layout_marginTop="8dp"
+                android:text="@string/max_clean" />
+        </LinearLayout>
+
+        <!-- ============ Save card ============ -->
+        <LinearLayout style="@style/Card">
+
+            <Button
+                android:id="@+id/btnSave"
+                style="@style/PrimaryButton"
+                android:layout_width="match_parent"
+                android:text="@string/save_clean" />
+
+            <ProgressBar
+                android:id="@+id/progressSave"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:max="100"
+                android:progressTint="@color/accent"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/txtSave"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/save_hint"
+                android:textColor="@color/muted"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
