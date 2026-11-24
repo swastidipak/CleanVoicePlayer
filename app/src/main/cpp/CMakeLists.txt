@@ -20,5 +20,5 @@ add_library(cleanvoice SHARED
     ${RN}/src/rnnoise_tables.c)
 
 target_include_directories(cleanvoice PRIVATE ${RN}/include ${RN}/src)
-target_compile_options(cleanvoice PRIVATE -O3 -ffast-math -fvisibility=hidden -Wno-unused-parameter)
+target_compile_options(cleanvoice PRIVATE -O3 -fvisibility=hidden -Wno-unused-parameter)
 target_link_libraries(cleanvoice m)

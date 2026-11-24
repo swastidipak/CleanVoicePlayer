@@ -32,12 +32,10 @@ public final class AudioProcessor {
     private final float[][] frameIn;      // per-channel RNNoise input frame
     private final float[][] dryFrame;     // per-channel copy (for low-strength blending)
     private final float[][] dryDelay;     // aligns dry with RNNoise output
-    private final float[][] wetPrev;      // one-frame look-ahead for the gate
-    private final float[][] dryPrev;
     private int fill;
     private int dryDelayPos;
-    private float vadPrev;
-    private boolean havePrev;
+    private final float[] vadHist = new float[VAD_SPAN];
+    private int vadPos;
     private int hold;
     private float gateGain = 1f;
 
@@ -56,8 +54,12 @@ public final class AudioProcessor {
     private volatile float clarityAmount;
     private volatile float volumeGain = 1f;
 
-    /** Delay (samples) of RNNoise's output relative to its input. Measured, see tools/dsptest. */
-    static final int RN_DELAY = 480;
+    /**
+     * Delay (samples) of RNNoise's output relative to its input: 480 window + 480 look-ahead in the
+     * current xiph model. (The old v0.1 model has 480; tests can override with -Dcleanvoice.rnDelay.)
+     */
+    static final int RN_DELAY = Integer.getInteger("cleanvoice.rnDelay", 960);
+    private static final int VAD_SPAN = RN_DELAY / RNNoise.FRAME + 1;
 
     public AudioProcessor(int inputRate, int channels) {
         this.inRate = inputRate;
@@ -72,8 +74,6 @@ public final class AudioProcessor {
         frameIn = new float[this.channels][FRAME];
         dryFrame = new float[this.channels][FRAME];
         dryDelay = new float[this.channels][RN_DELAY];
-        wetPrev = new float[this.channels][FRAME];
-        dryPrev = new float[this.channels][FRAME];
         hp = new Biquad[this.channels];
         mud = new Biquad[this.channels];
         presence = new Biquad[this.channels];
@@ -108,7 +108,7 @@ public final class AudioProcessor {
     /** Output frames by which the result lags the input. */
     public int latencyFrames() {
         int rs = (int) Math.round(Resampler.latencyInputFrames() * (double) rate / inRate);
-        return neural ? rs + ClapSuppressor.LATENCY + RN_DELAY + FRAME + SpectralDenoiser.LATENCY
+        return neural ? rs + ClapSuppressor.LATENCY + RN_DELAY + SpectralDenoiser.LATENCY
                       : rs + ClapSuppressor.LATENCY + SpectralDenoiser.LATENCY;
     }
 
@@ -121,12 +121,9 @@ public final class AudioProcessor {
         for (int c = 0; c < channels; c++) {
             spectral[c].clearBuffers();
             Arrays.fill(dryDelay[c], 0f);
-            Arrays.fill(wetPrev[c], 0f);
-            Arrays.fill(dryPrev[c], 0f);
             hp[c].reset(); mud[c].reset(); presence[c].reset(); air[c].reset();
         }
         fill = 0;
-        havePrev = false;
         compEnv = 0f;
         limGain = 1f;
     }
@@ -192,22 +189,13 @@ public final class AudioProcessor {
         }
         dryDelayPos = (dryDelayPos + FRAME) % RN_DELAY;
 
-        if (!havePrev) {
-            for (int c = 0; c < channels; c++) {
-                System.arraycopy(frameIn[c], 0, wetPrev[c], 0, FRAME);
-                System.arraycopy(dryFrame[c], 0, dryPrev[c], 0, FRAME);
-            }
-            vadPrev = vad;
-            havePrev = true;
-            // emit one frame of silence to keep latency constant
-            for (int i = 0; i < FRAME; i++) for (int c = 0; c < channels; c++) out[(outFrames + i) * channels + c] = 0f;
-            outFrames += FRAME;
-            return;
-        }
-
-        // Gate: open if speech in this frame or the next one (look-ahead), hold 250 ms after speech.
-        float v = Math.max(vadPrev, vad);
-        if (v >= 0.5f) hold = 25; else if (hold > 0) hold--;
+        // The output frame is the audio from RN_DELAY ago; the network's voice readings for that audio
+        // and the frames after it are in vadHist, so the gate opens just before a word starts.
+        vadHist[vadPos] = vad;
+        vadPos = (vadPos + 1) % VAD_SPAN;
+        float v = 0f;
+        for (float h : vadHist) v = Math.max(v, h);
+        if (v >= 0.5f) hold = 25; else if (hold > 0) hold--;          // keep open 250 ms after speech
         float depth = clamp((amt - 0.5f) * 2f, 0f, 1f);
         float floor = (float) Math.pow(10, (-45f * depth) / 20f);
         float target = (v >= 0.5f || hold > 0) ? 1f : (v > 0.25f ? floor + (1 - floor) * (v - 0.25f) / 0.25f : floor);
@@ -217,18 +205,11 @@ public final class AudioProcessor {
             float a = target > gateGain ? gateOpen : gateClose;
             gateGain = a * gateGain + (1 - a) * target;
             for (int c = 0; c < channels; c++) {
-                float w = wetPrev[c][i], d = dryPrev[c][i];
-                float y = amt > 0f ? (w * mix + d * (1 - mix)) * gateGain : d;
-                out[(outFrames + i) * channels + c] = y;
+                float w = frameIn[c][i], d = dryFrame[c][i];
+                out[(outFrames + i) * channels + c] = amt > 0f ? (w * mix + d * (1 - mix)) * gateGain : d;
             }
         }
         outFrames += FRAME;
-
-        for (int c = 0; c < channels; c++) {
-            System.arraycopy(frameIn[c], 0, wetPrev[c], 0, FRAME);
-            System.arraycopy(dryFrame[c], 0, dryPrev[c], 0, FRAME);
-        }
-        vadPrev = vad;
     }
 
     private void emit(float[] src, int off, float g) {
