@@ -12,8 +12,8 @@ public class RealTest {
         String dir = a[0];
         String outDir = a.length > 1 ? a[1] : null;
         String[] speechFiles = {"clnsp1", "clnsp2", "clnsp3", "clnsp5", "clnsp8", "clnsp13"};
-        String[] noiseFiles = {"Babble_1", "Babble_2", "Neighbor_1", "AirportAnnouncements_1", "AirConditioner_1",
-                "VacuumCleaner_1", "Typing_1", "Munching_1", "ShuttingDoor_1", "CLAPS"};
+        String[] noiseFiles = System.getProperty("noises", "Babble_1,Babble_2,Neighbor_1,AirportAnnouncements_1,AirConditioner_1,"
+                + "VacuumCleaner_1,Typing_1,Munching_1,ShuttingDoor_1,CLAPS").split(",");
         double snrDb = Double.parseDouble(System.getProperty("snr", "5"));
         System.out.printf("Real speech + real noise at %.0f dB SNR. Neural: %s%n", snrDb, new AudioProcessor(16000, 1).isNeural());
         System.out.printf("%-24s %16s %22s %22s%n", "noise", "NR 0% SI-SNR", "NR 100% SI-SNR / removed", "NR 80% SI-SNR / removed");

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Clean Voice Player</string>
-    <string name="tagline">Play recordings offline with noise removal, clear voice and loud volume</string>
+    <string name="tagline">Offline AI noise removal for your voice recordings</string>
     <string name="open_recording">Open audio recording</string>
     <string name="no_file">No file selected</string>
     <string name="play">Play</string>
@@ -9,10 +9,10 @@
     <string name="stop">Stop</string>
     <string name="enhance_master">Enhancements</string>
     <string name="enhance_hint">Turn off to hear the original and compare</string>
-    <string name="noise_removal">Background noise removal</string>
-    <string name="noise_hint">Removes hiss, fan, AC, traffic, hum and crowd noise. 100% = strongest.</string>
+    <string name="noise_removal">AI noise removal</string>
+    <string name="noise_hint">AI removes fan, AC, traffic, people talking, claps, knocks, footsteps, dogs and hiss. 80–100% recommended.</string>
     <string name="voice_clarity">Voice clarity</string>
-    <string name="clarity_hint">Makes speech crisper and evens out quiet and loud words</string>
+    <string name="clarity_hint">Crisper speech, evens out quiet and loud words. 30–50% recommended.</string>
     <string name="volume_boost">Volume boost</string>
     <string name="volume_hint">Up to 5x louder, with a limiter so it never crackles</string>
     <string name="max_clean">One-tap max clean</string>
