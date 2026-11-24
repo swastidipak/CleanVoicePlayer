@@ -36,9 +36,10 @@ jobs:
             $R/src/celt_lpc.c $R/src/nnet.c $R/src/nnet_default.c $R/src/parse_lpcnet_weights.c \
             $R/src/rnnoise_data.c $R/src/rnnoise_tables.c -o libcleanvoice.so -lm
           mkdir -p testout samples
-          javac -d testout app/src/main/java/com/cleanvoice/player/dsp/*.java tools/dsptest/VoiceTest.java
+          javac -d testout app/src/main/java/com/cleanvoice/player/dsp/*.java tools/dsptest/*.java
           java -Djava.library.path=. -cp testout com.cleanvoice.player.dsp.VoiceTest \
             tools/dsptest/speech.wav tools/dsptest/babble1.wav tools/dsptest/babble2.wav samples | tee test-results.txt
+          java -Djava.library.path=. -cp testout com.cleanvoice.player.dsp.RealTest tools/dsptest/real samples | tee -a test-results.txt
 
       - uses: gradle/actions/setup-gradle@v4
 
@@ -68,6 +69,7 @@ jobs:
           git config user.email github-actions@users.noreply.github.com
           git checkout --orphan apk
           git rm -rfq --cached .
-          git add -f CleanVoicePlayer.apk test-results.txt samples/*.wav
+          mkdir -p model && cp model.tgz model/
+          git add -f CleanVoicePlayer.apk test-results.txt samples/*.wav model/model.tgz
           git commit -qm "APK build ${GITHUB_SHA::7}"
           git push -f origin apk

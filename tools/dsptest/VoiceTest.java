@@ -85,6 +85,12 @@ public class VoiceTest {
     }
 
     static void report(String label, float[] ref, float[] noisy, float[] y) {
+        double[] m = metrics(ref, noisy, y);
+        System.out.printf("  %-22s noise removed %5.1f dB   voice quality (SI-SNR) %5.1f dB   claps detected %3d   lag %d%n",
+                label, m[0], m[1], lastDetections, (int) m[2]);
+    }
+
+    static double[] metrics(float[] ref, float[] noisy, float[] y) {
         // best lag check (should be 0 if latency is right)
         int bestLag = 0; double best = -1;
         for (int lag = -800; lag <= 800; lag += 1) {
@@ -104,8 +110,7 @@ public class VoiceTest {
         double nrDb = 10 * Math.log10((yy / pauseOut) / (spIn / pauseIn)); // gain-independent
         double g = sy / yy; // best scale
         double err = sr - 2 * g * sy + g * g * yy;
-        System.out.printf("  %-22s noise removed %5.1f dB   voice quality (SI-SNR) %5.1f dB   claps detected %3d   lag %d%n",
-                label, nrDb, 10 * Math.log10(sr / Math.max(err, 1e-12)), lastDetections, bestLag);
+        return new double[]{nrDb, 10 * Math.log10(sr / Math.max(err, 1e-12)), bestLag};
     }
 
     static float[] resampleRef(float[] x) {
