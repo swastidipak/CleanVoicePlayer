@@ -2,7 +2,11 @@ name: Build APK
 
 on:
   push:
+    branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -21,8 +25,25 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk CleanVoicePlayer.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: CleanVoicePlayer-APK
-          path: app/build/outputs/apk/release/*.apk
+          path: CleanVoicePlayer.apk
+
+      - name: Publish as "latest" release (direct download link)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest CleanVoicePlayer.apk \
+            --title "Clean Voice Player - latest APK" \
+            --notes "Download CleanVoicePlayer.apk on your Android phone and tap it to install."
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git checkout --orphan apk
+          git rm -rfq --cached .
+          git add -f CleanVoicePlayer.apk
+          git commit -qm "APK build ${GITHUB_SHA::7}"
+          git push -f origin apk
