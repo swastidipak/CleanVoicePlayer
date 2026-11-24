@@ -23,4 +23,11 @@
     <string name="save_failed">Save failed: %1$s</string>
     <string name="open_first">Open a recording first</string>
     <string name="open_failed">Could not open file: %1$s</string>
+    <string name="keep_all">Keep all sounds</string>
+    <string name="keep_all_off_hint">Off: AI keeps only voices and removes every other sound.</string>
+    <string name="keep_all_on_hint">On: keeps voices, claps, contact sounds and breathing. Removes only steady noise (fan, AC, hiss, hum).</string>
+    <string name="noise_removal_keep">Steady noise removal</string>
+    <string name="noise_hint_keep">Removes fan, AC, hiss and hum. All other sounds stay. 70–100% recommended.</string>
+    <string name="clarity_keep">Lift quiet sounds</string>
+    <string name="clarity_hint_keep">Brings soft sounds up closer to the loud ones. 40–70% recommended.</string>
 </resources>

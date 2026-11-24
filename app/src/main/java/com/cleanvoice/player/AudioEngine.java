@@ -41,6 +41,7 @@ final class AudioEngine {
     // effect settings
     private volatile boolean enabled = true;
     private volatile float noise, clarity, volume = 1f;
+    private volatile boolean keepAll;
 
     AudioEngine(Context ctx, Listener listener) {
         this.appContext = ctx.getApplicationContext();
@@ -127,12 +128,14 @@ final class AudioEngine {
     void setNoiseReduction(float amount) { noise = amount; applySettings(processor); }
     void setVoiceClarity(float amount) { clarity = amount; applySettings(processor); }
     void setVolume(float gain) { volume = gain; applySettings(processor); }
+    void setKeepAllSounds(boolean on) { keepAll = on; applySettings(processor); }
 
     private void applySettings(AudioProcessor p) {
         if (p == null) return;
         p.setNoiseReduction(enabled ? noise : 0f);
         p.setVoiceClarity(enabled ? clarity : 0f);
         p.setVolumeGain(enabled ? volume : 1f);
+        p.setKeepAllSounds(keepAll);
     }
 
     // ---------------- playback thread ----------------

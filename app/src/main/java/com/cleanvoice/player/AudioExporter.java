@@ -20,7 +20,7 @@ final class AudioExporter {
         boolean onProgress(int percent);
     }
 
-    static void export(Context ctx, Uri input, Uri output, float noise, float clarity, float volume,
+    static void export(Context ctx, Uri input, Uri output, float noise, float clarity, float volume, boolean keepAll,
                        Progress progress) throws IOException {
         File tmp = new File(ctx.getCacheDir(), "export_" + System.nanoTime() + ".wav");
         try {
@@ -51,6 +51,7 @@ final class AudioExporter {
                                 proc.setNoiseReduction(noise);
                                 proc.setVoiceClarity(clarity);
                                 proc.setVolumeGain(volume);
+                                proc.setKeepAllSounds(keepAll);
                                 sampleRate = proc.outputRate();
                                 toSkip = proc.latencyFrames();           // drop processing delay at the start
                             }

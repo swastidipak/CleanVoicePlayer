@@ -136,6 +136,18 @@
                 android:textColor="@color/muted"
                 android:textSize="13sp" />
 
+            <!-- Mode -->
+            <LinearLayout style="@style/RowHeader">
+                <Switch
+                    android:id="@+id/swKeepAll"
+                    style="@style/RowSwitch"
+                    android:text="@string/keep_all" />
+            </LinearLayout>
+            <TextView
+                android:id="@+id/txtModeHint"
+                style="@style/RowHint"
+                android:text="@string/keep_all_off_hint" />
+
             <!-- Noise removal -->
             <LinearLayout style="@style/RowHeader">
                 <Switch
@@ -149,6 +161,7 @@
                 style="@style/RowSeek"
                 android:max="100" />
             <TextView
+                android:id="@+id/txtNoiseHint"
                 style="@style/RowHint"
                 android:text="@string/noise_hint" />
 
@@ -165,6 +178,7 @@
                 style="@style/RowSeek"
                 android:max="100" />
             <TextView
+                android:id="@+id/txtClarityHint"
                 style="@style/RowHint"
                 android:text="@string/clarity_hint" />
 

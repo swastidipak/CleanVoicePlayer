@@ -53,6 +53,7 @@ public final class AudioProcessor {
     private volatile float noiseAmount;
     private volatile float clarityAmount;
     private volatile float volumeGain = 1f;
+    private volatile boolean keepAll;
 
     /**
      * Delay (samples) of RNNoise's output relative to its input: 480 window + 480 look-ahead in the
@@ -104,6 +105,11 @@ public final class AudioProcessor {
     public void setVoiceClarity(float a) { clarityAmount = clamp(a, 0f, 1f); }
     /** Linear volume multiplier 1..5. */
     public void setVolumeGain(float g) { volumeGain = clamp(g, 0.1f, 5f); }
+    /**
+     * Keep-all-sounds mode: keeps voices, claps, body/contact sounds and breathing; removes only
+     * steady background noise (fan, AC, hiss, hum) and lifts quiet sounds. Off = AI voice-only cleaning.
+     */
+    public void setKeepAllSounds(boolean on) { keepAll = on; }
 
     /** Output frames by which the result lags the input. */
     public int latencyFrames() {
@@ -134,7 +140,7 @@ public final class AudioProcessor {
         float[] rs = resampler.output();
         outFrames = 0;
         ensureOut(n + FRAME * 2);
-        clap.setDepth(clamp((noiseAmount - 0.4f) / 0.6f, 0f, 1f));
+        clap.setDepth(keepAll ? 0f : clamp((noiseAmount - 0.4f) / 0.6f, 0f, 1f));
         for (int f = 0; f < n; f++) clap.process(rs, f * channels);
         if (!neural) {
             for (int f = 0; f < n; f++) emit(rs, f * channels, 1f);
@@ -166,6 +172,7 @@ public final class AudioProcessor {
 
     private void runNeuralFrame() {
         final float amt = noiseAmount;
+        final boolean keep = keepAll;
         float vad = 0f;
         for (int c = 0; c < channels; c++) {
             // dry copy delayed to line up with RNNoise output
@@ -206,7 +213,7 @@ public final class AudioProcessor {
             gateGain = a * gateGain + (1 - a) * target;
             for (int c = 0; c < channels; c++) {
                 float w = frameIn[c][i], d = dryFrame[c][i];
-                out[(outFrames + i) * channels + c] = amt > 0f ? (w * mix + d * (1 - mix)) * gateGain : d;
+                out[(outFrames + i) * channels + c] = amt > 0f && !keep ? (w * mix + d * (1 - mix)) * gateGain : d;
             }
         }
         outFrames += FRAME;
@@ -223,17 +230,23 @@ public final class AudioProcessor {
         final float gain = volumeGain;
         if (Math.abs(clarity - appliedClarity) > 1e-3f) updateClarityFilters(clarity);
         // spectral stage: polish after the network, or full denoiser in fallback mode
-        float specAmt = neural ? clamp((amt - 0.5f) * 2f, 0f, 1f) * 0.5f : amt;
+        final boolean keep = keepAll;
+        // keep-all: the spectral stage is the only denoiser (steady noise only, no speech gate)
+        float specAmt = keep ? amt : (neural ? clamp((amt - 0.5f) * 2f, 0f, 1f) * 0.5f : amt);
         for (int c = 0; c < channels; c++) {
             spectral[c].setAmount(specAmt);
-            spectral[c].setUseGate(!neural);
+            spectral[c].setUseGate(!neural && !keep);
         }
 
         // Dynamics follow the speaker's own level: compress loud words a little, and push anything
         // far below the voice (leftover noise, room tone) further down instead of lifting it.
-        final float ratio = 1f + 2f * clarity;
-        final float makeupDb = 3f * clarity;
-        final float expSlope = 2.5f * clarity;
+        // keep-all: "clarity" lifts quiet sounds (breathing, soft voices, light contact) up to +12 dB
+        final float ratio = keep ? 1f + 1.5f * clarity : 1f + 2f * clarity;
+        final float expSlope = keep ? 1f * clarity : 2.5f * clarity;
+        final float compBelow = keep ? 30f : 10f, expBelow = keep ? 50f : 24f;
+        // auto make-up: the loudest sounds keep their level, quieter ones come up
+        // (keep-all at 50% lifts sounds 30 dB below the loudest by ~13 dB)
+        final float makeupDb = compBelow * (1f - 1f / ratio);
 
         for (int f = 0; f < frames; f++) {
             int base = f * channels;
@@ -257,7 +270,7 @@ public final class AudioProcessor {
                 compEnv = a * compEnv + (1 - a) * peak;
                 float envDb = 20f * (float) Math.log10(compEnv + 1e-9f);
                 speechLevelDb = Math.max(envDb, speechLevelDb - levelFall);
-                float compThr = speechLevelDb - 10f, expThr = speechLevelDb - 24f;
+                float compThr = speechLevelDb - compBelow, expThr = speechLevelDb - expBelow;
                 float gDb = makeupDb;
                 if (envDb > compThr) gDb -= (envDb - compThr) * (1f - 1f / ratio);
                 else if (envDb < expThr) gDb -= Math.min(30f, (expThr - envDb) * expSlope);

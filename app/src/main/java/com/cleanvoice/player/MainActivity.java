@@ -34,7 +34,8 @@ public class MainActivity extends Activity implements AudioEngine.Listener {
 
     private TextView txtFile, txtPos, txtDur, txtNoise, txtClarity, txtVolume, txtSave;
     private SeekBar seekPosition, seekNoise, seekClarity, seekVolume;
-    private Switch swMaster, swNoise, swClarity, swVolume;
+    private Switch swMaster, swNoise, swClarity, swVolume, swKeepAll;
+    private TextView txtModeHint, txtNoiseHint, txtClarityHint;
     private Button btnPlay, btnStop, btnSave, btnOpen, btnMax;
     private ProgressBar progressSave;
 
@@ -73,6 +74,10 @@ public class MainActivity extends Activity implements AudioEngine.Listener {
         swNoise = findViewById(R.id.swNoise);
         swClarity = findViewById(R.id.swClarity);
         swVolume = findViewById(R.id.swVolume);
+        swKeepAll = findViewById(R.id.swKeepAll);
+        txtModeHint = findViewById(R.id.txtModeHint);
+        txtNoiseHint = findViewById(R.id.txtNoiseHint);
+        txtClarityHint = findViewById(R.id.txtClarityHint);
         btnPlay = findViewById(R.id.btnPlay);
         btnStop = findViewById(R.id.btnStop);
         btnSave = findViewById(R.id.btnSave);
@@ -85,6 +90,7 @@ public class MainActivity extends Activity implements AudioEngine.Listener {
         swNoise.setChecked(prefs.getBoolean("noiseOn", true));
         swClarity.setChecked(prefs.getBoolean("clarityOn", true));
         swVolume.setChecked(prefs.getBoolean("volumeOn", true));
+        swKeepAll.setChecked(prefs.getBoolean("keepAll", false));
         seekNoise.setProgress(prefs.getInt("noise2", 90));
         seekClarity.setProgress(prefs.getInt("clarity2", 40));
         seekVolume.setProgress(prefs.getInt("volume2", 50));
@@ -100,6 +106,12 @@ public class MainActivity extends Activity implements AudioEngine.Listener {
         swNoise.setOnCheckedChangeListener(switchListener);
         swClarity.setOnCheckedChangeListener(switchListener);
         swVolume.setOnCheckedChangeListener(switchListener);
+        swKeepAll.setOnCheckedChangeListener((b, on) -> {
+            // sensible starting points for each mode
+            seekNoise.setProgress(on ? 80 : 90);
+            seekClarity.setProgress(on ? 50 : 40);
+            applyEffects();
+        });
         applyEffects();
 
         btnOpen.setOnClickListener(v -> pickFile());
@@ -114,7 +126,7 @@ public class MainActivity extends Activity implements AudioEngine.Listener {
             swClarity.setChecked(true);
             swVolume.setChecked(true);
             seekNoise.setProgress(100);
-            seekClarity.setProgress(50);
+            seekClarity.setProgress(swKeepAll.isChecked() ? 70 : 50);
             seekVolume.setProgress(100); // 2x
         });
         btnSave.setOnClickListener(v -> startSave());
@@ -215,6 +227,7 @@ public class MainActivity extends Activity implements AudioEngine.Listener {
 
     private void runExport(Uri output) {
         final float noise = effNoise(), clarity = effClarity(), volume = effVolume();
+        final boolean keepAll = swKeepAll.isChecked();
         final Uri input = currentUri;
         exporting = true;
         btnSave.setEnabled(false);
@@ -223,7 +236,7 @@ public class MainActivity extends Activity implements AudioEngine.Listener {
         txtSave.setText(getString(R.string.saving, 0));
         new Thread(() -> {
             try {
-                AudioExporter.export(getApplicationContext(), input, output, noise, clarity, volume, pct -> {
+                AudioExporter.export(getApplicationContext(), input, output, noise, clarity, volume, keepAll, pct -> {
                     runOnUiThread(() -> {
                         progressSave.setProgress(pct);
                         txtSave.setText(getString(R.string.saving, pct));
@@ -265,12 +278,20 @@ public class MainActivity extends Activity implements AudioEngine.Listener {
         engine.setVoiceClarity(swClarity.isChecked() ? seekClarity.getProgress() / 100f : 0f);
         engine.setVolume(swVolume.isChecked() ? 1f + seekVolume.getProgress() / 100f : 1f);
         engine.setEnhancementsEnabled(swMaster.isChecked());
+        boolean keep = swKeepAll.isChecked();
+        engine.setKeepAllSounds(keep);
+        txtModeHint.setText(keep ? R.string.keep_all_on_hint : R.string.keep_all_off_hint);
+        swNoise.setText(keep ? R.string.noise_removal_keep : R.string.noise_removal);
+        txtNoiseHint.setText(keep ? R.string.noise_hint_keep : R.string.noise_hint);
+        swClarity.setText(keep ? R.string.clarity_keep : R.string.voice_clarity);
+        txtClarityHint.setText(keep ? R.string.clarity_hint_keep : R.string.clarity_hint);
 
         prefs.edit()
                 .putBoolean("master", swMaster.isChecked())
                 .putBoolean("noiseOn", swNoise.isChecked())
                 .putBoolean("clarityOn", swClarity.isChecked())
                 .putBoolean("volumeOn", swVolume.isChecked())
+                .putBoolean("keepAll", swKeepAll.isChecked())
                 .putInt("noise2", seekNoise.getProgress())
                 .putInt("clarity2", seekClarity.getProgress())
                 .putInt("volume2", seekVolume.getProgress())
