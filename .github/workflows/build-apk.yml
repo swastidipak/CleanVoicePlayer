@@ -19,6 +19,27 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Download RNNoise model (checksum verified)
+        run: |
+          R=app/src/main/cpp/rnnoise
+          hash=$(cat $R/model_version)
+          curl -fsSL -o model.tgz "https://media.xiph.org/rnnoise/models/rnnoise_data-$hash.tar.gz"
+          echo "$hash  model.tgz" | sha256sum -c
+          tar xzf model.tgz -C $R
+          ls -la $R/src | grep rnnoise_data
+
+      - name: Voice test bench (same Java + native code as the app)
+        run: |
+          R=app/src/main/cpp/rnnoise
+          gcc -O2 -shared -fPIC -I$JAVA_HOME/include -I$JAVA_HOME/include/linux -I$R/include -I$R/src \
+            app/src/main/cpp/rnnoise_jni.c $R/src/denoise.c $R/src/rnn.c $R/src/pitch.c $R/src/kiss_fft.c \
+            $R/src/celt_lpc.c $R/src/nnet.c $R/src/nnet_default.c $R/src/parse_lpcnet_weights.c \
+            $R/src/rnnoise_data.c $R/src/rnnoise_tables.c -o libcleanvoice.so -lm
+          mkdir -p testout samples
+          javac -d testout app/src/main/java/com/cleanvoice/player/dsp/*.java tools/dsptest/VoiceTest.java
+          java -Djava.library.path=. -cp testout com.cleanvoice.player.dsp.VoiceTest \
+            tools/dsptest/speech.wav tools/dsptest/babble1.wav tools/dsptest/babble2.wav samples | tee test-results.txt
+
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build APK
@@ -30,7 +51,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: CleanVoicePlayer-APK
-          path: CleanVoicePlayer.apk
+          path: |
+            CleanVoicePlayer.apk
+            test-results.txt
+            samples/
 
       - name: Publish as "latest" release (direct download link)
         env:
@@ -44,6 +68,6 @@ jobs:
           git config user.email github-actions@users.noreply.github.com
           git checkout --orphan apk
           git rm -rfq --cached .
-          git add -f CleanVoicePlayer.apk
+          git add -f CleanVoicePlayer.apk test-results.txt samples/*.wav
           git commit -qm "APK build ${GITHUB_SHA::7}"
           git push -f origin apk

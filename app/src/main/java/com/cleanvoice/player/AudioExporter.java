@@ -30,53 +30,57 @@ final class AudioExporter {
                 raf.write(new byte[44]); // header placeholder
                 AudioProcessor proc = null;
                 int sampleRate = 0, channels = 0;
-                int toSkip = AudioProcessor.latencyFrames(); // drop processor delay at the start
+                int toSkip = 0;
                 long dataBytes = 0;
                 long duration = Math.max(1, dec.getDurationUs());
                 int lastPct = -1;
                 byte[] bytes = new byte[0];
 
-                while (true) {
-                    int frames = dec.read();
-                    float[] buf;
-                    boolean end = frames < 0;
-                    if (end) {
-                        if (proc == null) break;
-                        frames = AudioProcessor.latencyFrames(); // flush tail
-                        buf = new float[frames * channels];
-                    } else {
-                        if (proc == null) {
-                            sampleRate = dec.getSampleRate();
-                            channels = dec.getChannels();
-                            proc = new AudioProcessor(sampleRate, channels);
-                            proc.setNoiseReduction(noise);
-                            proc.setVoiceClarity(clarity);
-                            proc.setVolumeGain(volume);
+                try {
+                    while (true) {
+                        int frames = dec.read();
+                        boolean end = frames < 0;
+                        int outFrames;
+                        if (end) {
+                            if (proc == null) break;
+                            outFrames = proc.flush();                 // push out the delayed tail
+                        } else {
+                            if (proc == null) {
+                                channels = dec.getChannels();
+                                proc = new AudioProcessor(dec.getSampleRate(), channels);
+                                proc.setNoiseReduction(noise);
+                                proc.setVoiceClarity(clarity);
+                                proc.setVolumeGain(volume);
+                                sampleRate = proc.outputRate();
+                                toSkip = proc.latencyFrames();           // drop processing delay at the start
+                            }
+                            if (dec.getChannels() != channels) continue; // ignore odd mid-file layout change
+                            outFrames = proc.process(dec.getBuffer(), frames);
                         }
-                        buf = dec.getBuffer();
-                        if (dec.getChannels() != channels) continue; // ignore odd mid-file layout change
-                    }
-                    proc.process(buf, frames);
+                        float[] buf = proc.output();
 
-                    int startFrame = Math.min(frames, toSkip);
-                    toSkip -= startFrame;
-                    int n = (frames - startFrame) * channels;
-                    if (bytes.length < n * 2) bytes = new byte[n * 2];
-                    for (int i = 0; i < n; i++) {
-                        int s = Math.round(buf[startFrame * channels + i] * 32767f);
-                        if (s > 32767) s = 32767; else if (s < -32768) s = -32768;
-                        bytes[2 * i] = (byte) s;
-                        bytes[2 * i + 1] = (byte) (s >> 8);
-                    }
-                    raf.write(bytes, 0, n * 2);
-                    dataBytes += n * 2L;
-                    if (end) break;
+                        int startFrame = Math.min(outFrames, toSkip);
+                        toSkip -= startFrame;
+                        int n = (outFrames - startFrame) * channels;
+                        if (bytes.length < n * 2) bytes = new byte[n * 2];
+                        for (int i = 0; i < n; i++) {
+                            int s = Math.round(buf[startFrame * channels + i] * 32767f);
+                            if (s > 32767) s = 32767; else if (s < -32768) s = -32768;
+                            bytes[2 * i] = (byte) s;
+                            bytes[2 * i + 1] = (byte) (s >> 8);
+                        }
+                        raf.write(bytes, 0, n * 2);
+                        dataBytes += n * 2L;
+                        if (end) break;
 
-                    int pct = (int) Math.min(99, dec.getLastPtsUs() * 100 / duration);
-                    if (pct != lastPct) {
-                        lastPct = pct;
-                        if (!progress.onProgress(pct)) throw new IOException("Cancelled");
+                        int pct = (int) Math.min(99, dec.getLastPtsUs() * 100 / duration);
+                        if (pct != lastPct) {
+                            lastPct = pct;
+                            if (!progress.onProgress(pct)) throw new IOException("Cancelled");
+                        }
                     }
+                } finally {
+                    if (proc != null) proc.release();
                 }
                 if (proc == null) throw new IOException("No audio could be decoded");
                 raf.seek(0);

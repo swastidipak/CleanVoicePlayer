@@ -85,9 +85,9 @@ public class MainActivity extends Activity implements AudioEngine.Listener {
         swNoise.setChecked(prefs.getBoolean("noiseOn", true));
         swClarity.setChecked(prefs.getBoolean("clarityOn", true));
         swVolume.setChecked(prefs.getBoolean("volumeOn", true));
-        seekNoise.setProgress(prefs.getInt("noise", 80));
-        seekClarity.setProgress(prefs.getInt("clarity", 60));
-        seekVolume.setProgress(prefs.getInt("volume", 100));
+        seekNoise.setProgress(prefs.getInt("noise2", 90));
+        seekClarity.setProgress(prefs.getInt("clarity2", 40));
+        seekVolume.setProgress(prefs.getInt("volume2", 50));
 
         SeekBar.OnSeekBarChangeListener effectListener = new SimpleSeek() {
             @Override public void onProgressChanged(SeekBar s, int p, boolean fromUser) { applyEffects(); }
@@ -114,8 +114,8 @@ public class MainActivity extends Activity implements AudioEngine.Listener {
             swClarity.setChecked(true);
             swVolume.setChecked(true);
             seekNoise.setProgress(100);
-            seekClarity.setProgress(80);
-            seekVolume.setProgress(150); // 2.5x
+            seekClarity.setProgress(50);
+            seekVolume.setProgress(100); // 2x
         });
         btnSave.setOnClickListener(v -> startSave());
 
@@ -271,9 +271,9 @@ public class MainActivity extends Activity implements AudioEngine.Listener {
                 .putBoolean("noiseOn", swNoise.isChecked())
                 .putBoolean("clarityOn", swClarity.isChecked())
                 .putBoolean("volumeOn", swVolume.isChecked())
-                .putInt("noise", seekNoise.getProgress())
-                .putInt("clarity", seekClarity.getProgress())
-                .putInt("volume", seekVolume.getProgress())
+                .putInt("noise2", seekNoise.getProgress())
+                .putInt("clarity2", seekClarity.getProgress())
+                .putInt("volume2", seekVolume.getProgress())
                 .apply();
     }
 

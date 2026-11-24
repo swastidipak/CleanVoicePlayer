@@ -5,3 +5,11 @@ local.properties
 .idea/
 *.iml
 .DS_Store
+# downloaded by :app:downloadRnnoiseModel
+app/src/main/cpp/rnnoise/src/rnnoise_data.c
+app/src/main/cpp/rnnoise/src/rnnoise_data.h
+app/src/main/cpp/rnnoise/src/rnnoise_data_little.c
+app/src/main/cpp/rnnoise/src/rnnoise_data_little.h
+app/src/main/cpp/rnnoise/models/
+.cxx/
+app/.cxx/

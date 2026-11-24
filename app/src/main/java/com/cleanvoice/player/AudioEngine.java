@@ -173,10 +173,8 @@ final class AudioEngine {
                 if (frames < 0) {
                     // End of file: push the processor's internal delay out, let it finish playing.
                     if (t != null && processor != null) {
-                        int tail = AudioProcessor.latencyFrames();
-                        float[] zeros = new float[tail * channels];
-                        processor.process(zeros, tail);
-                        writeAll(t, zeros, zeros.length);
+                        int tail = processor.flush();
+                        writeAll(t, processor.output(), tail * channels);
                         framesSinceFlush += tail;
                         long deadline = SystemClock.uptimeMillis() + 3000;
                         while (!stopRequested && playing && SystemClock.uptimeMillis() < deadline
@@ -196,20 +194,20 @@ final class AudioEngine {
                 if (dec.getFormatVersion() != formatVersion || t == null) {
                     formatVersion = dec.getFormatVersion();
                     if (t != null) { t.release(); }
+                    if (processor != null) processor.release();
                     channels = dec.getChannels();
-                    t = createTrack(dec.getSampleRate(), channels);
-                    track = t;
                     AudioProcessor p = new AudioProcessor(dec.getSampleRate(), channels);
                     applySettings(p);
                     processor = p;
+                    t = createTrack(p.outputRate(), channels);
+                    track = t;
                     framesSinceFlush = 0;
                     if (playing) t.play();
                 }
 
-                float[] buf = dec.getBuffer();
-                processor.process(buf, frames);
-                if (!writeAll(t, buf, frames * channels)) continue; // interrupted by seek/stop
-                framesSinceFlush += frames;
+                int outFrames = processor.process(dec.getBuffer(), frames);
+                if (!writeAll(t, processor.output(), outFrames * channels)) continue; // interrupted by seek/stop
+                framesSinceFlush += outFrames;
 
                 positionUs = dec.getLastPtsUs();
                 long now = SystemClock.uptimeMillis();
@@ -229,7 +227,9 @@ final class AudioEngine {
             });
         } finally {
             track = null;
+            AudioProcessor p = processor;
             processor = null;
+            if (p != null) p.release();
             if (t != null) {
                 try { t.stop(); } catch (Exception ignored) { }
                 t.release();

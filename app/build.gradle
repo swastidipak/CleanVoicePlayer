@@ -10,8 +10,17 @@ android {
         applicationId 'com.cleanvoice.player'
         minSdk 26
         targetSdk 35
-        versionCode 1
-        versionName '1.0'
+        versionCode 2
+        versionName '2.0'
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'src/main/cpp/CMakeLists.txt'
+        }
     }
 
     buildTypes {
@@ -29,3 +38,25 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
+
+// RNNoise neural-network weights (~MBs of C source) are downloaded once from xiph.org and checksum-verified.
+def rnDir = file('src/main/cpp/rnnoise')
+tasks.register('downloadRnnoiseModel') {
+    def target = new File(rnDir, 'src/rnnoise_data.c')
+    onlyIf { !target.exists() }
+    doLast {
+        def hash = new File(rnDir, 'model_version').text.trim()
+        def tgz = new File(layout.buildDirectory.get().asFile, "rnnoise_data-${hash}.tar.gz")
+        tgz.parentFile.mkdirs()
+        new URL("https://media.xiph.org/rnnoise/models/rnnoise_data-${hash}.tar.gz").withInputStream { i ->
+            tgz.withOutputStream { it << i }
+        }
+        def digest = java.security.MessageDigest.getInstance('SHA-256').digest(tgz.bytes).encodeHex().toString()
+        if (digest != hash) throw new GradleException("RNNoise model checksum mismatch")
+        project.copy {
+            from tarTree(resources.gzip(tgz))
+            into rnDir
+        }
+    }
+}
+tasks.named('preBuild') { dependsOn 'downloadRnnoiseModel' }
